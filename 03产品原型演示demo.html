@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随看AI - 内嵌播放器原型</title>
+<style>
+  :root{
+    --bg:#0f0f0f; --panel:#161616; --card:#1d1d1d;
+    --line:rgba(212,175,55,.25); --line-strong:rgba(212,175,55,.55);
+    --gold:#d4af37; --gold2:#f0d98c; --gold3:#8c6d1f;
+    --text:#f5efe0; --muted:#a89f8c;
+    --brand:#ff7a45; --brand2:#ffb199;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;}
+  body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  button{font-family:inherit;}
+
+  /* 顶部导航 */
+  .topnav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:0 20px;height:52px;background:rgba(15,15,15,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);}
+  .logo{font-weight:900;font-size:18px;background:linear-gradient(90deg,#ff7a45,#ffb199);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .nav-title{font-size:14px;color:#e8e8e8;}
+  .nav-search{margin-left:auto;font-size:12px;color:#777;border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 16px;width:180px;}
+
+  /* 主体 */
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 20px 120px;}
+
+  /* 播放器 */
+  .player{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+  .video-scene{position:absolute;inset:0;overflow:hidden;background:#000;}
+  .video-scene svg{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .6s ease;}
+  .video-scene svg.active{opacity:1;}
+  .scene-sub{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);color:#f5efe0;font-size:14px;text-shadow:0 2px 8px rgba(0,0,0,.9);white-space:nowrap;z-index:3;}
+
+  /* 播放器顶部渐变条 */
+  .player-top{position:absolute;top:0;left:0;right:0;padding:12px 16px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(0,0,0,.75),transparent);z-index:10;}
+  .player-top .t{font-size:14px;font-weight:700;}
+  .ai-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);display:inline-block;margin-right:5px;}
+  .ai-dot.silent{background:#666;box-shadow:none;}
+  .ai-status{font-size:11px;color:var(--gold2);}
+  .ai-status.silent{color:#888;}
+
+  /* 控制栏 */
+  .controls{position:absolute;left:0;right:0;bottom:0;padding:10px 16px 12px;display:flex;align-items:center;gap:12px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);z-index:10;}
+  .ctl{background:none;border:none;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .ctl:hover{color:var(--gold2);}
+  .progress{flex:1;height:3px;background:rgba(255,255,255,.25);border-radius:2px;position:relative;cursor:pointer;}
+  .progress .played{position:absolute;left:0;top:0;bottom:0;width:34%;border-radius:2px;background:linear-gradient(90deg,var(--brand),var(--brand2));}
+  .progress .played::after{content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:#fff;}
+  .time{font-size:11px;color:#ccc;white-space:nowrap;}
+  .ai-btn{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#1a1408;border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 0 14px rgba(212,175,55,.35);}
+
+  /* AI 元素：全部绝对定位在播放器内 */
+  .char-badge{position:absolute;top:56px;right:16px;z-index:12;background:rgba(13,20,36,.92);border:1px solid var(--line-strong);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--gold2);cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.5);display:none;animation:slideIn .4s ease both;}
+  .char-badge.show{display:block;}
+  .signal-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(540px,92%);z-index:14;background:rgba(13,20,36,.96);border:1px solid var(--line-strong);border-radius:14px;padding:16px 18px;display:none;box-shadow:0 16px 50px rgba(0,0,0,.7);}
+  .signal-panel.show{display:block;animation:cardUp .35s ease both;}
+  .signal-panel h4{font-size:13px;color:var(--gold2);font-weight:600;margin-bottom:4px;}
+  .signal-panel .sp-sub{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+  .sp-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed rgba(212,175,55,.16);font-size:12px;}
+  .sp-row:last-of-type{border-bottom:0;}
+  .sp-tag{flex-shrink:0;width:62px;font-size:11px;color:var(--gold2);}
+  .sp-desc{flex:1;color:var(--text);opacity:.85;line-height:1.5;}
+  .sp-state{flex-shrink:0;font-size:11px;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+  .sp-no{background:rgba(255,255,255,.07);color:var(--muted);}
+  .sp-yes{background:rgba(212,175,55,.16);color:var(--gold2);border:1px solid var(--line-strong);}
+  .sp-veto{background:rgba(255,122,69,.16);color:var(--brand2);border:1px solid rgba(255,122,69,.5);}
+  .sp-verdict{margin-top:12px;background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text);line-height:1.6;}
+  .sp-verdict b{color:var(--gold2);}
+  .char-badge.fade{opacity:.18;transition:opacity 1s;}
+  @keyframes slideIn{from{opacity:0;transform:translateX(12px);}to{opacity:1;transform:translateX(0);}}
+
+  .pause-card{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);width:min(440px,86%);z-index:12;background:rgba(13,20,36,.95);border:1px solid var(--line-strong);border-radius:14px;padding:14px 16px;display:none;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+  .pause-card.show{display:block;animation:cardUp .35s ease both;}
+  @keyframes cardUp{from{opacity:0;transform:translate(-50%,12px);}to{opacity:1;transform:translate(-50%,0);}}
+  .pause-card h4{color:var(--gold2);font-size:13px;margin-bottom:6px;}
+  .pause-card p{font-size:12px;color:var(--text);line-height:1.65;}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .pill{font-size:11px;background:rgba(212,175,55,.1);border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--gold2);}
+
+  .rewind-card{position:absolute;top:56px;left:50%;transform:translateX(-50%);width:min(440px,86%);z-index:12;background:rgba(13,20,36,.95);border:1px solid rgba(255,159,67,.5);border-radius:14px;padding:14px 16px;display:none;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+  .rewind-card.show{display:block;animation:cardDown .35s ease both;}
+  @keyframes cardDown{from{opacity:0;transform:translate(-50%,-10px);}to{opacity:1;transform:translate(-50%,0);}}
+  .rewind-card h4{color:var(--orange, #ff9f43);font-size:13px;margin-bottom:6px;}
+  .rewind-card p{font-size:12px;color:var(--text);line-height:1.65;}
+
+  .prev-card{position:absolute;right:16px;bottom:80px;width:min(300px,80%);z-index:13;background:rgba(13,20,36,.96);border:1px solid var(--line-strong);border-radius:14px;padding:14px;display:none;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+  .prev-card.show{display:block;animation:slideIn .4s ease both;}
+  .prev-card h4{color:var(--gold2);font-size:13px;margin-bottom:6px;}
+  .prev-card ul{padding-left:16px;font-size:12px;color:var(--muted);line-height:1.8;}
+  .prev-card .btns{display:flex;gap:8px;margin-top:10px;}
+  .prev-card .btns button{flex:1;border:none;border-radius:8px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;}
+  .b-skip{background:rgba(255,255,255,.1);color:#ccc;}
+  .b-go{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#1a1408;}
+  .countdown{font-size:11px;color:var(--gold2);text-align:right;margin-top:6px;}
+
+  .chat-bubble{position:absolute;right:16px;bottom:76px;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#1a1408;font-size:13px;font-weight:900;border:none;cursor:pointer;z-index:14;box-shadow:0 8px 20px rgba(212,175,55,.4);display:none;}
+  .chat-bubble.show{display:block;}
+
+  .side-backdrop{position:absolute;inset:0;z-index:15;background:rgba(0,0,0,.55);display:none;}
+  .side-backdrop.show{display:block;}
+
+  .ai-sidebar{position:absolute;top:0;right:-36%;width:36%;height:100%;z-index:20;background:rgba(13,20,36,.97);border-left:1px solid var(--line-strong);transition:right .35s ease;display:flex;flex-direction:column;}
+  .ai-sidebar.open{right:0;}
+  .s-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);}
+  .s-head b{color:var(--gold2);font-size:14px;}
+  .s-close{background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;}
+  .s-tabs{display:flex;border-bottom:1px solid var(--line);}
+  .s-tab{flex:1;padding:9px;font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;}
+  .s-tab.active{color:var(--gold2);border-bottom-color:var(--gold);font-weight:700;}
+  .s-body{flex:1;overflow-y:auto;padding:12px;font-size:12px;}
+  .rel-item{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;color:var(--text);}
+  .rel-item b{color:var(--gold2);}
+  .tl{position:relative;padding-left:20px;}
+  .tl::before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:1px;background:var(--line-strong);}
+  .tl-item{position:relative;padding:0 0 12px 14px;color:var(--muted);line-height:1.6;}
+  .tl-item::before{content:"";position:absolute;left:2px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);}
+  .tl-item b{color:var(--text);}
+  .chat-body{display:flex;flex-direction:column;gap:10px;padding-bottom:8px;}
+  .msg{max-width:85%;padding:8px 10px;border-radius:12px;font-size:12px;line-height:1.5;}
+  .msg.ai{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px;}
+  .msg.user{background:linear-gradient(135deg,var(--gold3),var(--gold));color:#1a1408;font-weight:600;align-self:flex-end;border-bottom-right-radius:3px;}
+  .s-input{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line);}
+  .s-input input{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--text);outline:none;}
+  .s-input button{background:linear-gradient(135deg,var(--gold3),var(--gold2));color:#1a1408;border:none;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;}
+  .typing-cursor{display:inline-block;margin-left:2px;color:var(--gold);animation:blink .8s step-start infinite;font-weight:700;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  .info-row{max-width:1100px;margin:16px auto 0;padding:14px 16px;background:var(--panel);border-radius:10px;}
+  .info-row h2{font-size:17px;margin-bottom:6px;}
+  .info-row .tags{display:flex;gap:8px;margin-top:6px;}
+  .info-row .tag{font-size:11px;color:#bbb;background:rgba(255,255,255,.08);border-radius:999px;padding:3px 10px;}
+  .rec-title{max-width:1100px;margin:18px auto 8px;font-size:14px;color:#e8e8e8;}
+  .rec-row{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .rec{background:var(--panel);border-radius:8px;padding:10px;font-size:12px;color:#bbb;border:1px solid rgba(255,255,255,.06);}
+  .rec .thumb{height:60px;border-radius:6px;background:linear-gradient(135deg,#1a2338,#2a1f10);margin-bottom:6px;}
+  .scene-bar{position:fixed;left:0;right:0;bottom:0;z-index:100;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.1);}
+  .scene-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:#ccc;border-radius:999px;padding:7px 14px;font-size:12px;cursor:pointer;}
+  .scene-btn:hover,.scene-btn.active{border-color:var(--line-strong);color:var(--gold2);background:rgba(212,175,55,.08);}
+  @media (max-width:760px){.ai-sidebar{right:-70%;width:70%;}.rec-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+  <div class="topnav">
+    <span class="logo"></span>
+    <span class="nav-title">《迷雾追凶》第 8 集 · 随看AI 内嵌演示</span>
+    <span class="nav-search">🔍 搜索剧集 / 明星</span>
+  </div>
+
+  <div class="wrap">
+    <div class="player" id="player">
+      <div class="video-scene" id="videoScene">
+<svg class="scene-frame active" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="s1bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1424"/><stop offset=".6" stop-color="#111c2e"/><stop offset="1" stop-color="#04070d"/></linearGradient>
+    <radialGradient id="s1lamp" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="rgba(255,186,96,.85)"/><stop offset=".45" stop-color="rgba(255,150,70,.25)"/><stop offset="1" stop-color="rgba(255,150,70,0)"/></radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#s1bg)"/>
+  <rect width="960" height="540" fill="url(#s1lamp)" opacity=".55"/>
+  <rect x="118" y="30" width="10" height="250" rx="4" fill="#05080f"/>
+  <path d="M96 260 a30 30 0 0 1 54 0 l-8 16 h-38 z" fill="#05080f"/>
+  <circle cx="123" cy="266" r="22" fill="url(#s1lamp)"/>
+  <path d="M0 460 q160 -70 320 -20 q180 55 380 10 q130 -30 260 -70 v160 H0 z" fill="#04070d"/>
+  <ellipse cx="720" cy="430" rx="16" ry="42" fill="#0a101c"/>
+  <path d="M704 390 q16 -30 32 0 l-6 44 h-24 z" fill="#0a101c"/>
+  <g>
+    <line x1="331" y1="154" x2="327" y2="184" stroke="rgba(170,200,235,0.16)" stroke-width="1"/>
+    <line x1="74" y1="96" x2="70" y2="125" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="931" y1="519" x2="927" y2="543" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="444" y1="428" x2="440" y2="448" stroke="rgba(170,200,235,0.10)" stroke-width="1"/>
+    <line x1="564" y1="434" x2="560" y2="453" stroke="rgba(170,200,235,0.19)" stroke-width="1"/>
+    <line x1="126" y1="228" x2="122" y2="266" stroke="rgba(170,200,235,0.16)" stroke-width="1"/>
+    <line x1="63" y1="406" x2="59" y2="425" stroke="rgba(170,200,235,0.22)" stroke-width="1"/>
+    <line x1="47" y1="136" x2="43" y2="163" stroke="rgba(170,200,235,0.13)" stroke-width="1"/>
+    <line x1="553" y1="120" x2="549" y2="156" stroke="rgba(170,200,235,0.11)" stroke-width="1"/>
+    <line x1="835" y1="185" x2="831" y2="206" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="654" y1="192" x2="650" y2="221" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="729" y1="64" x2="725" y2="100" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="210" y1="508" x2="206" y2="547" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="795" y1="321" x2="791" y2="353" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="464" y1="370" x2="460" y2="397" stroke="rgba(170,200,235,0.10)" stroke-width="1"/>
+    <line x1="184" y1="249" x2="180" y2="269" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="537" y1="506" x2="533" y2="534" stroke="rgba(170,200,235,0.18)" stroke-width="1"/>
+    <line x1="294" y1="74" x2="290" y2="95" stroke="rgba(170,200,235,0.14)" stroke-width="1"/>
+    <line x1="168" y1="350" x2="164" y2="372" stroke="rgba(170,200,235,0.21)" stroke-width="1"/>
+    <line x1="431" y1="40" x2="427" y2="79" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="571" y1="321" x2="567" y2="349" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="608" y1="508" x2="604" y2="544" stroke="rgba(170,200,235,0.19)" stroke-width="1"/>
+    <line x1="70" y1="95" x2="66" y2="121" stroke="rgba(170,200,235,0.14)" stroke-width="1"/>
+    <line x1="680" y1="66" x2="676" y2="85" stroke="rgba(170,200,235,0.18)" stroke-width="1"/>
+    <line x1="317" y1="456" x2="313" y2="483" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="908" y1="355" x2="904" y2="373" stroke="rgba(170,200,235,0.21)" stroke-width="1"/>
+    <line x1="363" y1="172" x2="359" y2="209" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="60" y1="223" x2="56" y2="265" stroke="rgba(170,200,235,0.11)" stroke-width="1"/>
+    <line x1="756" y1="253" x2="752" y2="283" stroke="rgba(170,200,235,0.12)" stroke-width="1"/>
+    <line x1="892" y1="508" x2="888" y2="528" stroke="rgba(170,200,235,0.09)" stroke-width="1"/>
+    <line x1="411" y1="284" x2="407" y2="306" stroke="rgba(170,200,235,0.19)" stroke-width="1"/>
+    <line x1="884" y1="285" x2="880" y2="325" stroke="rgba(170,200,235,0.13)" stroke-width="1"/>
+    <line x1="367" y1="389" x2="363" y2="414" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="180" y1="154" x2="176" y2="179" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="12" y1="496" x2="8" y2="532" stroke="rgba(170,200,235,0.09)" stroke-width="1"/>
+    <line x1="288" y1="4" x2="284" y2="26" stroke="rgba(170,200,235,0.13)" stroke-width="1"/>
+    <line x1="378" y1="326" x2="374" y2="348" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="527" y1="55" x2="523" y2="87" stroke="rgba(170,200,235,0.20)" stroke-width="1"/>
+    <line x1="798" y1="401" x2="794" y2="431" stroke="rgba(170,200,235,0.12)" stroke-width="1"/>
+    <line x1="106" y1="493" x2="102" y2="531" stroke="rgba(170,200,235,0.12)" stroke-width="1"/>
+    <line x1="195" y1="68" x2="191" y2="92" stroke="rgba(170,200,235,0.13)" stroke-width="1"/>
+    <line x1="112" y1="348" x2="108" y2="385" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="0" y1="154" x2="-4" y2="189" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="372" y1="26" x2="368" y2="46" stroke="rgba(170,200,235,0.20)" stroke-width="1"/></g>
+</svg>
+<svg class="scene-frame" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="s2bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17100c"/><stop offset=".55" stop-color="#201510"/><stop offset="1" stop-color="#080605"/></linearGradient>
+    <radialGradient id="s2lamp" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="rgba(255,190,110,.7)"/><stop offset="1" stop-color="rgba(255,150,70,0)"/></radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#s2bg)"/>
+  <rect x="430" y="180" width="100" height="12" rx="6" fill="#050505"/>
+  <circle cx="480" cy="260" r="90" fill="url(#s2lamp)" opacity=".5"/>
+  <path d="M0 540 v-60 q240 -80 480 -20 q240 60 480 10 v70 z" fill="#050505"/>
+  <path d="M330 420 q-24 -140 -20 -210 q8 -44 34 -42 q26 2 22 52 q-4 90 4 210 z" fill="#0c0806"/>
+  <circle cx="338" cy="150" r="36" fill="#0c0806"/>
+  <path d="M630 420 q24 -140 20 -210 q-8 -44 -34 -42 q-26 2 -22 52 q4 90 -4 210 z" fill="#0c0806"/>
+  <circle cx="622" cy="150" r="36" fill="#0c0806"/>
+  <rect x="440" y="300" width="80" height="130" rx="8" fill="#1c1410" stroke="#3a2c1c" stroke-width="2"/>
+</svg>
+<svg class="scene-frame" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="s3bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0f14"/><stop offset=".6" stop-color="#15171d"/><stop offset="1" stop-color="#07080b"/></linearGradient>
+    <radialGradient id="s3spot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="rgba(255,210,140,.5)"/><stop offset="1" stop-color="rgba(255,210,140,0)"/></radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#s3bg)"/>
+  <rect width="960" height="540" fill="url(#s3spot)" opacity=".35"/>
+  <path d="M0 430 h960 v110 H0 z" fill="#0a0a0c"/>
+  <rect x="380" y="300" width="200" height="130" rx="6" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
+  <rect x="400" y="320" width="70" height="90" rx="3" fill="rgba(255,210,140,.10)" stroke="rgba(255,210,140,.25)" stroke-width="1.5"/>
+  <circle cx="435" cy="365" r="8" fill="rgba(255,210,140,.35)"/>
+  <rect x="500" y="340" width="60" height="44" rx="4" fill="#0a0a0c" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+  <path d="M510 384 h40 l-4 30 h-32 z" fill="#0a0a0c"/>
+  <path d="M590 330 q-14 -22 -34 -18 q-14 3 -12 18 q10 10 26 12 q14 2 20 -12 z" fill="rgba(200,180,150,.25)"/>
+</svg>
+<svg class="scene-frame" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="s4bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1020"/><stop offset=".6" stop-color="#101a30"/><stop offset="1" stop-color="#050810"/></linearGradient>
+    <radialGradient id="s4booth" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="rgba(255,190,100,.55)"/><stop offset="1" stop-color="rgba(255,190,100,0)"/></radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#s4bg)"/>
+  <rect width="960" height="540" fill="url(#s4booth)" opacity=".35"/>
+  <rect x="400" y="150" width="160" height="280" rx="10" fill="#0b0f1a" stroke="#1c2538" stroke-width="3"/>
+  <rect x="420" y="180" width="120" height="140" rx="6" fill="rgba(255,190,100,.12)" stroke="rgba(255,190,100,.3)" stroke-width="2"/>
+  <rect x="470" y="360" width="20" height="40" rx="4" fill="#1c2538"/>
+  <circle cx="430" cy="240" r="8" fill="rgba(255,190,100,.4)"/>
+  <g>
+    <line x1="331" y1="154" x2="327" y2="184" stroke="rgba(170,200,235,0.16)" stroke-width="1"/>
+    <line x1="74" y1="96" x2="70" y2="125" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="931" y1="519" x2="927" y2="543" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="444" y1="428" x2="440" y2="448" stroke="rgba(170,200,235,0.10)" stroke-width="1"/>
+    <line x1="564" y1="434" x2="560" y2="453" stroke="rgba(170,200,235,0.19)" stroke-width="1"/>
+    <line x1="126" y1="228" x2="122" y2="266" stroke="rgba(170,200,235,0.16)" stroke-width="1"/>
+    <line x1="63" y1="406" x2="59" y2="425" stroke="rgba(170,200,235,0.22)" stroke-width="1"/>
+    <line x1="47" y1="136" x2="43" y2="163" stroke="rgba(170,200,235,0.13)" stroke-width="1"/>
+    <line x1="553" y1="120" x2="549" y2="156" stroke="rgba(170,200,235,0.11)" stroke-width="1"/>
+    <line x1="835" y1="185" x2="831" y2="206" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="654" y1="192" x2="650" y2="221" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="729" y1="64" x2="725" y2="100" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="210" y1="508" x2="206" y2="547" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="795" y1="321" x2="791" y2="353" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="464" y1="370" x2="460" y2="397" stroke="rgba(170,200,235,0.10)" stroke-width="1"/>
+    <line x1="184" y1="249" x2="180" y2="269" stroke="rgba(170,200,235,0.15)" stroke-width="1"/>
+    <line x1="537" y1="506" x2="533" y2="534" stroke="rgba(170,200,235,0.18)" stroke-width="1"/>
+    <line x1="294" y1="74" x2="290" y2="95" stroke="rgba(170,200,235,0.14)" stroke-width="1"/>
+    <line x1="168" y1="350" x2="164" y2="372" stroke="rgba(170,200,235,0.21)" stroke-width="1"/>
+    <line x1="431" y1="40" x2="427" y2="79" stroke="rgba(170,200,235,0.07)" stroke-width="1"/>
+    <line x1="571" y1="321" x2="567" y2="349" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="608" y1="508" x2="604" y2="544" stroke="rgba(170,200,235,0.19)" stroke-width="1"/>
+    <line x1="70" y1="95" x2="66" y2="121" stroke="rgba(170,200,235,0.14)" stroke-width="1"/>
+    <line x1="680" y1="66" x2="676" y2="85" stroke="rgba(170,200,235,0.18)" stroke-width="1"/>
+    <line x1="317" y1="456" x2="313" y2="483" stroke="rgba(170,200,235,0.17)" stroke-width="1"/>
+    <line x1="908" y1="355" x2="904" y2="373" stroke="rgba(170,200,235,0.21)" stroke-width="1"/>
+    <line x1="363" y1="172" x2="359" y2="209" stroke="rgba(170,200,235,0.08)" stroke-width="1"/>
+    <line x1="60" y1="223" x2="56" y2="265" stroke="rgba(170,200,235,0.11)" stroke-width="1"/>
+    <line x1="756" y1="253" x2="752" y2="283" stroke="rgba(170,200,235,0.12)" stroke-width="1"/>
+    <line x1="892" y1="508" x2="888" y2="528" stroke="rgba(170,200,235,0.09)" stroke-width="1"/></g>
+</svg>
+        <div class="scene-sub" id="sceneSub">—— 张启明，你是不是忘了自己是谁了？——</div>
+      </div>
+
+      <div class="player-top">
+        <span class="t">迷雾追凶 · 第 8 集</span>
+        <span class="ai-status" id="aiStatus"><span class="ai-dot" id="aiDot"></span>AI 陪伴中</span>
+      </div>
+
+      <div class="char-badge" id="charBadge" onclick="openSidebar()">👤 张启明 首次出场 · 点我看关系</div>
+
+      <div class="pause-card" id="pauseCard">
+        <h4>⏸ 暂停解读 · 当前段落</h4>
+        <p>张启明（林晚的丈夫）刚发现关键证据被调包。他这句"忘了自己是谁"是双关：既质问对方，也指向自己失忆的真相。</p>
+        <div class="pills"><span class="pill">👤 张启明</span><span class="pill">👤 林晚</span><span class="pill">📎 证据线</span></div>
+      </div>
+
+      <div class="rewind-card" id="rewindCard">
+        <h4>↩ 这段怎么了</h4>
+        <p>你回看的这段是第 8 集转折点：张启明发现证物被调包，意味着警局内部有内鬼。上一集结尾的神秘电话正是内鬼打出的。</p>
+        <div class="pills"><span class="pill">前因：第 7 集神秘电话</span><span class="pill">后果：内鬼浮出水面</span></div>
+      </div>
+
+      <div class="prev-card" id="prevCard">
+        <h4>📖 前情提要 · 你上次看到第 7 集 41:20</h4>
+        <ul>
+          <li>张启明收到匿名电话，对方说"证物是假的"。</li>
+          <li>林晚在案发现场发现一枚不属于受害者的纽扣。</li>
+          <li>周克被停职，但私下仍在查内鬼。</li>
+        </ul>
+        <div class="btns"><button class="b-skip" onclick="hidePrev()">跳过</button><button class="b-go" onclick="hidePrev()">开始观看</button></div>
+        <div class="countdown" id="prevCount">15 秒后自动收起</div>
+      </div>
+
+      <div class="signal-panel" id="signalPanel">
+        <h4>信号判定 · 为什么此刻不打扰</h4>
+        <div class="sp-sub">介入条件：用户出现困惑信号 <b>且</b> 当前不在高沉浸片段 —— 两者必须同时成立。</div>
+        <div class="sp-row"><span class="sp-tag">强信号</span><span class="sp-desc">暂停 / 回看同一片段 / 反复回拖</span><span class="sp-state sp-no">未出现</span></div>
+        <div class="sp-row"><span class="sp-tag">中信号</span><span class="sp-desc">多次重看开头（需结合上下文，不单独触发）</span><span class="sp-state sp-no">未出现</span></div>
+        <div class="sp-row"><span class="sp-tag">弱信号</span><span class="sp-desc">角色首次出场 / 关键转折点</span><span class="sp-state sp-yes">出现</span></div>
+        <div class="sp-row"><span class="sp-tag">一票否决</span><span class="sp-desc">高沉浸片段（枪战 / 哭戏 / 反转 / 表白）</span><span class="sp-state sp-veto">命中</span></div>
+        <div class="sp-verdict">判定结果：<b>静默</b> —— 高沉浸触发一票否决，即使出现弱信号也不介入。</div>
+      </div>
+
+      <button class="chat-bubble" id="chatBubble" onclick="openSidebar()">AI</button>
+
+      <div class="side-backdrop" id="sideBackdrop" onclick="closeSidebar()"></div>
+
+      <div class="ai-sidebar" id="aiSidebar">
+        <div class="s-head"><b>随看AI</b><button class="s-close" onclick="closeSidebar()">✕</button></div>
+        <div class="s-tabs">
+          <button class="s-tab active" onclick="switchTab(0,this)">关系</button>
+          <button class="s-tab" onclick="switchTab(1,this)">时间线</button>
+          <button class="s-tab" onclick="switchTab(2,this)">对话</button>
+        </div>
+        <div class="s-body" id="sBody">
+          <div class="rel-item"><b>张启明</b> —— 丈夫 / 搭档 —— <b>林晚</b></div>
+          <div class="rel-item"><b>张启明</b> —— 昔日同事 / 互不信任 —— <b>周克</b></div>
+          <div class="rel-item"><b>林晚</b> —— 案件关键证人 —— <b>神秘电话人</b></div>
+        </div>
+        <div class="s-input" id="sInput" style="display:none;">
+          <input id="chatInput" placeholder="输入问题…">
+          <button onclick="sendMsg()">发送</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctl" id="playBtn" onclick="togglePlay()">⏸ 暂停</button>
+        <button class="ctl" onclick="showRewind()">↩ 回看</button>
+        <div class="progress"><div class="played" id="playedBar"></div></div>
+        <span class="time">23:45 / 45:12</span>
+        <button class="ctl">倍速</button>
+        <button class="ctl">清晰度</button>
+        <button class="ai-btn" onclick="openSidebar()">随看AI</button>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <h2>迷雾追凶 · 第 8 集</h2>
+      <div class="tags"><span class="tag">悬疑</span><span class="tag">犯罪</span><span class="tag">VIP</span><span class="tag">更新至第 8 集</span></div>
+    </div>
+    <div class="rec-title">猜你喜欢</div>
+    <div class="rec-row">
+      <div class="rec"><div class="thumb"></div>《迷雾追凶》第 7 集</div>
+      <div class="rec"><div class="thumb"></div>《迷雾追凶》第 6 集</div>
+      <div class="rec"><div class="thumb"></div>同类悬疑剧 A</div>
+      <div class="rec"><div class="thumb"></div>同类悬疑剧 B</div>
+    </div>
+  </div>
+
+  <div class="scene-bar" id="sceneBar">
+    <button class="scene-btn active" onclick="scenario(0)">默认播放</button>
+    <button class="scene-btn" onclick="scenario(1)">场景1 前情提要</button>
+    <button class="scene-btn" onclick="scenario(2)">场景2 人物徽标</button>
+    <button class="scene-btn" onclick="scenario(3)">场景3 暂停解读</button>
+    <button class="scene-btn" onclick="scenario(4)">场景4 回看解释</button>
+    <button class="scene-btn" onclick="scenario(5)">场景5 AI侧边栏</button>
+    <button class="scene-btn" onclick="scenario(6)">场景6 高沉浸静默</button>
+    <button class="scene-btn" onclick="scenario(7)">场景7 信号判定</button>
+  </div>
+
+<script>
+  var paused = false;
+  var sidebarOpen = false;
+
+  function setAiStatus(silent, text){
+    var dot = document.getElementById('aiDot');
+    var st = document.getElementById('aiStatus');
+    dot.className = silent ? 'ai-dot silent' : 'ai-dot';
+    st.className = silent ? 'ai-status silent' : 'ai-status';
+    st.innerHTML = dot.outerHTML + text;
+  }
+  function hideAll(){
+    ['charBadge','pauseCard','rewindCard','prevCard','chatBubble','signalPanel'].forEach(function(id){
+      document.getElementById(id).classList.remove('show');
+    });
+  }
+  function resetScene(){
+    hideAll();
+    closeSidebar(true);
+    setPaused(false);
+    setAiStatus(false, 'AI 陪伴中');
+    document.getElementById('aiSidebar').classList.remove('open');
+    document.getElementById('sideBackdrop').classList.remove('show');
+    document.getElementById('charBadge').classList.remove('fade');
+    var btns = document.querySelectorAll('.scene-btn');
+    btns.forEach(function(b){ b.classList.remove('active'); });
+  }
+  function setPaused(p){
+    paused = p;
+    var btn = document.getElementById('playBtn');
+    btn.textContent = p ? '▶ 播放' : '⏸ 暂停';
+    document.getElementById('pauseCard').classList.toggle('show', p);
+  }
+  function togglePlay(){
+    setPaused(!paused);
+  }
+  function showRewind(){
+    var card = document.getElementById('rewindCard');
+    card.classList.add('show');
+    clearTimeout(card._timer);
+    card._timer = setTimeout(function(){ card.classList.remove('show'); }, 5000);
+  }
+  function openSidebar(){
+    sidebarOpen = true;
+    setPaused(true);
+    document.getElementById('aiSidebar').classList.add('open');
+    document.getElementById('sideBackdrop').classList.add('show');
+  }
+  function closeSidebar(force){
+    sidebarOpen = false;
+    document.getElementById('aiSidebar').classList.remove('open');
+    document.getElementById('sideBackdrop').classList.remove('show');
+    if(!force) setPaused(false);
+  }
+  function showPrev(){
+    var card = document.getElementById('prevCard');
+    card.classList.add('show');
+    var n = 15;
+    document.getElementById('prevCount').textContent = n + ' 秒后自动收起';
+    clearInterval(card._timer);
+    card._timer = setInterval(function(){
+      n--;
+      if(n <= 0){ clearInterval(card._timer); hidePrev(); }
+      else{ document.getElementById('prevCount').textContent = n + ' 秒后自动收起'; }
+    }, 1000);
+  }
+  function hidePrev(){
+    var card = document.getElementById('prevCard');
+    card.classList.remove('show');
+    clearInterval(card._timer);
+  }
+  function switchTab(idx, el){
+    var tabs = document.querySelectorAll('.s-tab');
+    tabs.forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+    var body = document.getElementById('sBody');
+    var input = document.getElementById('sInput');
+    if(idx === 0){
+      input.style.display = 'none';
+      body.style.display = 'block';
+      body.innerHTML = '<div class="rel-item"><b>张启明</b> —— 丈夫 / 搭档 —— <b>林晚</b></div><div class="rel-item"><b>张启明</b> —— 昔日同事 / 互不信任 —— <b>周克</b></div><div class="rel-item"><b>林晚</b> —— 案件关键证人 —— <b>神秘电话人</b></div>';
+    } else if(idx === 1){
+      input.style.display = 'none';
+      body.style.display = 'block';
+      body.innerHTML = '<div class="tl"><div class="tl-item"><b>第 1 集</b>：雨夜命案，张启明失忆。</div><div class="tl-item"><b>第 5 集</b>：林晚发现纽扣，周克被停职。</div><div class="tl-item"><b>第 7 集</b>：匿名电话：证物是假的。</div><div class="tl-item"><b>第 8 集（当前）</b>：证物被调包，内鬼浮出水面。</div></div>';
+    } else {
+      input.style.display = 'flex';
+      body.style.display = 'block';
+      body.innerHTML = '<div class="chat-body" id="chatBody"><div class="msg ai">我是你的观剧搭子。剧情、人物、台词，问我，不剧透。</div><div class="msg user">刚才那个打电话的人是谁？</div><div class="msg ai">根据前 7 集官方剧情，电话里的人还没露面，但周克怀疑是警局内部的人。第 8 集会给出关键线索，我陪你一起看。</div></div>';
+      var first = document.querySelector('#chatBody .msg.ai');
+      if(first){ var t = first.textContent.trim(); typeText(first, t); }
+    }
+  }
+  function sendMsg(){
+    var input = document.getElementById('chatInput');
+    var body = document.getElementById('chatBody');
+    if(!body || !input) return;
+    var text = input.value.trim();
+    if(!text) return;
+    var userMsg = document.createElement('div');
+    userMsg.className = 'msg user';
+    userMsg.textContent = text;
+    body.appendChild(userMsg);
+    input.value = '';
+    body.scrollTop = body.scrollHeight;
+    setTimeout(function(){
+      var aiMsg = document.createElement('div');
+      aiMsg.className = 'msg ai';
+      body.appendChild(aiMsg);
+      body.scrollTop = body.scrollHeight;
+      typeText(aiMsg, '好的，我基于官方剧情回答：这个问题在第 8 集有直接答案，我先不剧透。你可以暂停在相关段落，我会给你上下文卡。');
+    }, 400);
+  }
+  function typeText(el, text){
+    el.textContent = '';
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = text; return; }
+    var i = 0, cur = document.createElement('span');
+    cur.className = 'typing-cursor'; el.appendChild(cur);
+    var timer = setInterval(function(){
+      if(i <= text.length){
+        el.textContent = text.slice(0, i); el.appendChild(cur); i++;
+        var body = document.getElementById('chatBody'); if(body) body.scrollTop = body.scrollHeight;
+      } else { clearInterval(timer); cur.remove(); }
+    }, 30);
+  }
+  function setScene(n, sub){
+    var svgs = document.querySelectorAll('.video-scene svg');
+    svgs.forEach(function(svg, i){ svg.classList.toggle('active', i === n - 1); });
+    if(sub){ document.getElementById('sceneSub').textContent = sub; }
+  }
+  function scenario(n){
+    resetScene();
+    var btns = document.querySelectorAll('.scene-btn');
+    if(btns[n]) btns[n].classList.add('active');
+    if(n === 0){
+      setScene(1, '—— 张启明，你是不是忘了自己是谁了？——');
+      document.getElementById('chatBubble').classList.add('show');
+      return;
+    }
+    if(n === 1){ showPrev(); setScene(1, '—— 开播前：前情提要已弹出 ——'); }
+    if(n === 2){
+      setScene(2, '—— 张启明，你是不是忘了自己是谁了？——');
+      document.getElementById('charBadge').classList.add('show');
+      setTimeout(function(){ document.getElementById('charBadge').classList.add('fade'); }, 5000);
+    }
+    if(n === 3){ setPaused(true); setScene(2, '—— 暂停：当前段落解读 ——'); }
+    if(n === 4){ showRewind(); setScene(3, '—— 回看：证物被调包片段 ——'); }
+    if(n === 5){ openSidebar(); setScene(2, '—— 张启明，你是不是忘了自己是谁了？——'); }
+    if(n === 6){
+      setScene(4, '—— 高沉浸片段 · 已静默 ——');
+      setAiStatus(true, '高沉浸片段 · 已静默');
+      document.getElementById('charBadge').classList.remove('show');
+      document.getElementById('chatBubble').classList.remove('show');
+    }
+    if(n === 7){
+      setScene(4, '—— 高沉浸片段 · 信号判定：静默 ——');
+      setAiStatus(true, '高沉浸片段 · 已静默');
+      document.getElementById('charBadge').classList.remove('show');
+      document.getElementById('chatBubble').classList.remove('show');
+      document.getElementById('signalPanel').classList.add('show');
+    }
+  }
+  // 默认：徽标 5 秒后自动淡出（模拟人物出场提示）
+  (function(){
+    var badge = document.getElementById('charBadge');
+    if(!badge) return;
+    badge.classList.add('show');
+    setTimeout(function(){ badge.classList.add('fade'); }, 5000);
+    document.getElementById('chatBubble').classList.add('show');
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随看AI - 用户问题与产品定位说明</title>
+<style>
+  :root{
+    --bg0:#070b14; --bg1:#0d1424; --bg2:#111c33;
+    --card:rgba(255,255,255,.045); --card-hover:rgba(255,255,255,.08);
+    --line:rgba(212,175,55,.25); --line-strong:rgba(212,175,55,.55);
+    --gold:#d4af37; --gold2:#f0d98c; --gold3:#8c6d1f;
+    --text:#f5efe0; --muted:#a89f8c;
+    --radius:18px;
+    --title:clamp(2rem,6vw,4.2rem);
+    --h2:clamp(1.4rem,3vw,2.2rem);
+    --body:clamp(.9rem,1.4vw,1.1rem);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(212,175,55,.12), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(91,141,239,.10), transparent 55%),
+      linear-gradient(180deg,var(--bg0) 0%,var(--bg1) 45%,var(--bg2) 100%);
+    color:var(--text); line-height:1.65; min-height:100vh; overflow-x:hidden;
+  }
+  main{max-width:1000px;margin:0 auto;padding:0 clamp(16px,4vw,40px) 80px;}
+  section{padding:clamp(40px,7vw,72px) 0;}
+
+  .gold-text{background:linear-gradient(120deg,#8c6d1f 0%,var(--gold2) 35%,var(--gold) 60%,var(--gold2) 85%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(7,11,20,.75);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
+  .nav{max-width:1000px;margin:0 auto;padding:14px clamp(16px,4vw,40px);display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-family:'Noto Serif SC','Songti SC',serif;font-weight:900;font-size:18px;color:var(--gold2);letter-spacing:.05em;}
+  .btn{display:inline-block;padding:11px 24px;border-radius:999px;background:linear-gradient(135deg,var(--gold3),var(--gold) 55%,var(--gold2));color:#1a1408;font-weight:800;text-decoration:none;border:none;cursor:pointer;box-shadow:0 8px 24px rgba(212,175,55,.35);transition:transform .25s,box-shadow .25s;}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(212,175,55,.5);}
+  .btn.ghost{background:transparent;color:var(--gold2);border:1.5px solid var(--line-strong);box-shadow:none;}
+  .btn.ghost:hover{background:rgba(212,175,55,.08);}
+
+  .hero{text-align:center;padding:clamp(60px,10vw,110px) 0 clamp(40px,7vw,72px);position:relative;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.3em;color:var(--gold);border:1px solid var(--line);border-radius:999px;padding:6px 16px;margin-bottom:20px;background:rgba(212,175,55,.06);text-transform:uppercase;}
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);}
+  .hero h1{font-family:'Noto Serif SC','Songti SC',serif;font-size:var(--title);line-height:1.25;margin-bottom:18px;font-weight:900;}
+  .hero p{font-size:clamp(1rem,2vw,1.25rem);color:var(--muted);max-width:620px;margin:0 auto 30px;}
+  .hero .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+  h2{font-size:var(--h2);margin-bottom:8px;font-family:'Noto Serif SC','Songti SC',serif;}
+  .sub{color:var(--muted);margin-bottom:28px;}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 22px;backdrop-filter:blur(8px);transition:transform .3s,border-color .3s,background .3s;position:relative;overflow:hidden;}
+  .card::after{content:"";position:absolute;inset:0;background:radial-gradient(400px 120px at 50% -20%,rgba(212,175,55,.12),transparent 70%);opacity:0;transition:opacity .3s;}
+  .card:hover{transform:translateY(-4px);border-color:var(--line-strong);background:var(--card-hover);}
+  .card:hover::after{opacity:1;}
+  .card h3{font-size:1.1rem;margin-bottom:8px;color:var(--gold2);}
+  .card p{font-size:var(--body);color:var(--muted);}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.15em;color:var(--gold);background:rgba(212,175,55,.1);border:1px solid var(--line);padding:3px 12px;border-radius:999px;margin-bottom:12px;}
+
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:16px;counter-reset:step;}
+  .step{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 22px;backdrop-filter:blur(8px);transition:transform .3s,border-color .3s;}
+  .step:hover{transform:translateY(-4px);border-color:var(--line-strong);}
+  .step::before{counter-increment:step;content:counter(step,decimal-leading-zero);display:block;font-family:'Noto Serif SC',serif;font-size:2.4rem;font-weight:900;background:linear-gradient(120deg,var(--gold3),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px;}
+  .step h3{font-size:1.05rem;margin-bottom:8px;color:var(--gold2);}
+  .step p{font-size:var(--body);color:var(--muted);}
+
+  .stats{display:flex;flex-wrap:wrap;gap:clamp(16px,4vw,40px);justify-content:center;text-align:center;}
+  .stat b{display:block;font-family:'Noto Serif SC',serif;font-size:clamp(1.8rem,4vw,2.8rem);background:linear-gradient(120deg,var(--gold2),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .stat span{font-size:13px;color:var(--muted);letter-spacing:.1em;}
+
+  .cta-band{background:linear-gradient(135deg,rgba(140,109,31,.35),rgba(212,175,55,.18) 50%,rgba(91,141,239,.12));border:1px solid var(--line-strong);border-radius:26px;padding:clamp(32px,6vw,56px);text-align:center;position:relative;overflow:hidden;}
+  .cta-band::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 200px at 50% -30%,rgba(240,217,140,.25),transparent 70%);pointer-events:none;}
+  .cta-band h2{position:relative;}
+  .cta-band p{position:relative;color:var(--muted);margin:12px 0 20px;}
+  .cta-band .btn{position:relative;}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:24px;letter-spacing:.05em;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+  .reveal{animation:fadeUp .7s cubic-bezier(.2,.7,.3,1) both;}
+  .d1{animation-delay:.05s;} .d2{animation-delay:.15s;} .d3{animation-delay:.25s;} .d4{animation-delay:.35s;} .d5{animation-delay:.45s;}
+  @media (prefers-reduced-motion: reduce){.reveal{animation:none;}}
+
+  .priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;}
+  .priority-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden;}
+  .priority-card.p0{border-color:var(--line-strong);background:linear-gradient(145deg,rgba(212,175,55,.13),var(--card));}
+  .priority-card h3{color:var(--gold2);font-size:1.08rem;margin:8px 0;}
+  .priority-card p,.priority-card li{color:var(--muted);font-size:var(--body);}
+  .priority-card ul{padding-left:1.2em;margin-top:10px;}
+  .priority-rank{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:24px;border-radius:999px;background:rgba(212,175,55,.13);border:1px solid var(--line);color:var(--gold2);font-weight:800;font-size:12px;}
+  .trigger-box{margin-top:18px;padding:18px 20px;border-radius:16px;background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.3);}
+  .trigger-box strong{color:#b9d0ff;}
+  .rule-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin-top:14px;}
+  .rule-list span{display:block;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:13px;}
+  .rule-list b{color:var(--text);}
+
+  /* ===== 暗夜金深化动画 ===== */
+  header,main,footer{position:relative;z-index:1;}
+  #particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .orb{position:fixed;border-radius:50%;filter:blur(60px);opacity:.55;z-index:0;pointer-events:none;animation:floatOrb 16s ease-in-out infinite;}
+  .orb1{width:420px;height:420px;top:-120px;left:-100px;background:radial-gradient(circle,rgba(212,175,55,.35),transparent 70%);}
+  .orb2{width:360px;height:360px;bottom:-100px;right:-80px;background:radial-gradient(circle,rgba(91,141,239,.25),transparent 70%);animation-delay:-6s;}
+  .orb3{width:280px;height:280px;top:40%;left:58%;background:radial-gradient(circle,rgba(255,159,67,.16),transparent 70%);animation-delay:-10s;}
+  @keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(30px,-40px) scale(1.08);}66%{transform:translate(-25px,25px) scale(.94);}}
+  @keyframes shimmer{0%{background-position:200% center;}100%{background-position:-200% center;}}
+  .shimmer{background-size:200% auto;animation:shimmer 4s linear infinite;}
+  @keyframes pulseGlow{0%,100%{box-shadow:0 0 18px rgba(212,175,55,.22);}50%{box-shadow:0 0 38px rgba(212,175,55,.55);}}
+  .btn{animation:pulseGlow 2.6s ease-in-out infinite;}
+  .eyebrow{animation:pulseGlow 3s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  .typed-cursor{display:inline-block;margin-left:2px;color:var(--gold);animation:blink .8s step-start infinite;font-weight:700;}
+  .card::before{content:"";position:absolute;top:0;left:-80%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(240,217,140,.14),transparent);transform:skewX(-20deg);transition:left .6s;}
+  .card:hover::before{left:120%;}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<header>
+  <div class="nav">
+    <div class="logo">随看AI</div>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <span class="eyebrow">AI 辅助看剧</span>
+    <h1 class="gold-text shimmer">看剧不用你问，该懂的时候它刚好告诉你</h1>
+    <p id="typedHero">面向追剧用户，基于观看状态和行为信号，在你需要时补上剧情缺口；默认不打断高沉浸片段，也不把推测说成事实。</p>
+  </section>
+
+  <section id="users">
+    <h2 class="reveal">看剧时，你是不是也这样</h2>
+    <p class="sub reveal d1">人物一多就乱，隔几天回来就接不上，暂停了想问又没入口。</p>
+    <div class="grid3">
+      <div class="card reveal d1"><span class="tag">新观众</span><h3>人物认不出，关系全靠猜</h3><p>前两集脸还没认全，角色一多就分不清谁是谁。</p></div>
+      <div class="card reveal d2"><span class="tag">回归观众</span><h3>隔几天回来，前情忘光了</h3><p>上一集讲到哪、这人为什么在这里，完全接不上。</p></div>
+      <div class="card reveal d3"><span class="tag">深度粉丝</span><h3>想挖细节，又不想被剧透</h3><p>对某个角色和细节好奇，但主动搜很容易被剧透一脸。</p></div>
+    </div>
+  </section>
+
+
+  <section id="priority">
+    <h2 class="reveal">先解决什么：从“看不懂”到“看得更深”</h2>
+    <p class="sub reveal d1">不是所有问题都值得在观看中主动介入。优先解决会影响后续理解、且用户当下确实表现出困惑的问题。</p>
+    <div class="priority-grid">
+      <div class="priority-card p0 reveal d1"><span class="priority-rank">P0</span><h3>当前剧情理解缺口</h3><p>人物身份、人物关系、关键台词、当前事件的前因后果。</p><ul><li>不解决会直接影响后续观看</li><li>暂停、回看后优先给短答案</li></ul></div>
+      <div class="priority-card reveal d2"><span class="priority-rank">P1</span><h3>跨集前情与线索承接</h3><p>帮助回归用户接回上一集，并持续追踪已关注的人物和线索。</p><ul><li>开播前给 3 条以内前情</li><li>只覆盖用户已观看范围</li></ul></div>
+      <div class="priority-card reveal d3"><span class="priority-rank">P2</span><h3>细节发现与深度解读</h3><p>在用户暂停、回看或收藏后，提供原本不会主动搜索的新理解。</p><ul><li>默认不主动打断正片</li><li>事实、观点、推测分层标注</li></ul></div>
+    </div>
+    <div class="trigger-box reveal d2"><strong>什么时候值得主动出现？</strong><p>只有当“问题可能影响理解”与“用户已经表现出需要”同时成立时才主动介入；高沉浸且连续观看时，系统保持静默。</p><div class="rule-list"><span><b>强信号：</b>暂停、连续回看同一片段、隔天回归</span><span><b>中信号：</b>拖动回前、打开字幕、调高音量</span><span><b>弱信号：</b>人物首次出场、关键转折点，仅给弱提示</span><span><b>禁止介入：</b>高沉浸片段、用户刚关闭 AI、内容置信度不足</span><span><b>暂不主动：</b>主观价值判断、普通台词逐句解释、未发生的剧情预测</span></div></div>
+  </section>
+
+  <section id="solution">
+    <h2 class="reveal">三步，该懂的时候它刚好告诉你</h2>
+    <p class="sub reveal d1">不用你切出去搜索，AI 在观看流程里适时出现。</p>
+    <div class="steps">
+      <div class="step reveal d1"><h3>开播前，前情提要</h3><p>隔天或隔季回来，开播前 30 秒帮你接上剧情，可一键跳过。</p></div>
+      <div class="step reveal d2"><h3>观看中，静默陪伴</h3><p>高能片段零打扰；人物出场或关键转折只亮一个小徽标，5 秒自动淡出。</p></div>
+      <div class="step reveal d3"><h3>暂停 / 回看，给出答案</h3><p>暂停展示人物、台词和段落解读；重复回看时才提示“这段怎么了”，不强制解释。</p></div>
+    </div>
+  </section>
+
+  <section id="value">
+    <h2 class="reveal">为什么选随看AI</h2>
+    <p class="sub reveal d1">它给的不是一个搜索框，是恰到好处的陪伴。</p>
+    <div class="grid3">
+      <div class="card reveal d1"><h3>不打扰</h3><p>识别高沉浸片段自动静默，所有主动提示 5 秒可忽略。</p></div>
+      <div class="card reveal d2"><h3>准确且可控</h3><p>优先引用官方剧情、剧照、花絮；不确定时明确说明，不把推测说成事实，并按观看进度控制剧透。</p></div>
+      <div class="card reveal d3"><h3>快</h3><p>暂停即出答案，5 秒看懂，关掉继续看。</p></div>
+    </div>
+  </section>
+
+
+  <section id="success">
+    <h2 class="reveal">产品成功，不是“弹得多”，而是“看得更顺”</h2>
+    <p class="sub reveal d1">首要验证用户是否更容易理解剧情，同时确保 AI 的出现没有降低观看完成率和沉浸感。</p>
+    <div class="grid3">
+      <div class="card reveal d1"><h3>理解提升</h3><p>人物识别、前情复述、关键因果关系理解正确率提升；重复回看和外部搜索减少。</p></div>
+      <div class="card reveal d2"><h3>观看不被破坏</h3><p>高沉浸误打扰接近零，AI 提示可忽略，用户关闭后短期不再反复打扰。</p></div>
+      <div class="card reveal d3"><h3>产生新发现</h3><p>用户在暂停或回看后愿意探索细节，并能区分剧情事实、用户观点和 AI 推测。</p></div>
+    </div>
+  </section>
+
+  <section id="proof">
+    <div class="stats reveal">
+      <div class="stat"><b>30秒</b><span>前情提要上限</span></div>
+      <div class="stat"><b>5秒</b><span>弱提示自动淡出</span></div>
+      <div class="stat"><b>0</b><span>高沉浸主动打扰目标</span></div>
+    </div>
+  </section>
+
+</main>
+<footer>© 2026 随看AI · 实战题目演示</footer>
+<script>
+(function(){
+  var canvas=document.getElementById('particles'); if(!canvas) return;
+  var ctx=canvas.getContext('2d'), W, H, ps=[];
+  function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; }
+  resize(); addEventListener('resize', resize);
+  var reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var N=Math.min(80, Math.floor(innerWidth/16));
+  for(var i=0;i<N;i++) ps.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.8+.6, vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3, a:Math.random()*.5+.2, tw:Math.random()*Math.PI*2});
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<ps.length;i++){
+      var p=ps[i]; p.x+=p.vx; p.y+=p.vy; p.tw+=.02;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      var alpha=p.a*(0.55+0.45*Math.sin(p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(212,175,55,'+alpha.toFixed(3)+')'; ctx.fill();
+    }
+    if(!reduced) requestAnimationFrame(draw);
+  }
+  if(!reduced) draw();
+})();
+(function(){
+  var el=document.getElementById('typedHero'); if(!el) return;
+  var text=el.textContent.trim(); el.textContent='';
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent=text; return; }
+  var i=0, cur=document.createElement('span');
+  cur.className='typed-cursor'; el.parentNode.insertBefore(cur, el.nextSibling);
+  function tick(){
+    if(i<=text.length){ el.textContent=text.slice(0,i); i++; setTimeout(tick, 45); }
+    else{ if(cur.parentNode) cur.parentNode.removeChild(cur); }
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
